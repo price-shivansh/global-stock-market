@@ -16,8 +16,7 @@ import {
   ResponsiveContainer, BarChart as ReBarChart, Bar, Cell,
   ComposedChart, Line, Legend
 } from 'recharts';
-
-const API_BASE = '/api';
+const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api';
 
 /* ── Currency prefix by symbol type ── */
 function getCurrencyPrefix(sym) {

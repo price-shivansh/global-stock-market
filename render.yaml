@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: global-market-backend
+    env: python
+    region: ohio
+    buildCommand: cd backend && pip install -r requirements.txt
+    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: APP_ENV
+        value: production
+      # - key: TELEGRAM_BOT_TOKEN
+      #   sync: false # Set in Render Dashboard
+      # - key: TELEGRAM_CHAT_ID
+      #   sync: false # Set in Render Dashboard
+
+  - type: static-site
+    name: global-market-frontend
+    env: node
+    region: ohio
+    buildCommand: cd frontend && npm install && npm run build
+    publishPath: frontend/dist
+    envVars:
+      - key: NODE_VERSION
+        value: 18.x
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: global-market-backend
+          property: host
+        # VITE_API_URL will be formatted as `https://global-market-backend...onrender.com`
+      - key: VITE_WS_URL
+        fromService:
+          type: web
+          name: global-market-backend
+          property: host
+        # VITE_WS_URL will be formatted as `wss://global-market-backend...onrender.com`
