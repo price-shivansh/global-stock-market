@@ -1,0 +1,37 @@
+{
+  "subscribers": {
+    "6974924369": {
+      "is_active": true,
+      "filters": {
+        "global": true,
+        "crude": true,
+        "gas": true,
+        "crypto": true,
+        "nifty": true,
+        "highpriority_only": false
+      }
+    },
+    "8420964180": {
+      "is_active": true,
+      "filters": {
+        "global": false,
+        "crude": true,
+        "gas": true,
+        "crypto": false,
+        "nifty": true,
+        "highpriority_only": false
+      }
+    },
+    "6615938188": {
+      "is_active": true,
+      "filters": {
+        "global": true,
+        "crude": true,
+        "gas": true,
+        "crypto": true,
+        "nifty": true,
+        "highpriority_only": false
+      }
+    }
+  }
+}
