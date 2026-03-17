@@ -15,7 +15,7 @@ services:
       # - key: TELEGRAM_CHAT_ID
       #   sync: false # Set in Render Dashboard
 
-  - type: static-site
+  - type: static_site
     name: global-market-frontend
     env: node
     region: ohio
