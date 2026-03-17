@@ -1,4 +1,4 @@
-# 📈 Indian Options Signal Dashboard
+# 📈  Options Signal Dashboard
 
 > A real-time, multi-asset trading dashboard with technical analysis, sentiment analysis, paper trading simulation, and Telegram news alerts — built with FastAPI + React (Vite).
 
