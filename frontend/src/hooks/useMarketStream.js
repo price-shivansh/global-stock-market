@@ -6,7 +6,18 @@
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-const WS_URL = import.meta.env.VITE_WS_URL || `ws://${window.location.hostname}:8000/ws/market`;
+const getWsUrl = () => {
+    const url = import.meta.env.VITE_WS_URL;
+    if (!url) return `ws://${window.location.hostname}:8000/ws/market`;
+    
+    const cleanUrl = url.replace(/\/$/, ""); // Remove trailing slash
+    const protocol = cleanUrl.startsWith('ws') ? "" : "wss://";
+    const path = cleanUrl.includes('/ws/market') ? "" : "/ws/market";
+    
+    return `${protocol}${cleanUrl}${path}`;
+};
+
+const WS_URL = getWsUrl();
 
 /**
  * @param {boolean} enabled - Toggle stream on/off

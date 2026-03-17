@@ -16,7 +16,15 @@ import {
   ResponsiveContainer, BarChart as ReBarChart, Bar, Cell,
   ComposedChart, Line, Legend
 } from 'recharts';
-const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api';
+const getApiBase = () => {
+  const url = import.meta.env.VITE_API_URL;
+  if (!url) return '/api';
+  const cleanUrl = url.endsWith('/') ? url.slice(0, -1) : url;
+  const protocol = cleanUrl.startsWith('http') ? '' : 'https://';
+  return `${protocol}${cleanUrl}/api`;
+};
+
+const API_BASE = getApiBase();
 
 /* ── Currency prefix by symbol type ── */
 function getCurrencyPrefix(sym) {
