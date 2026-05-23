@@ -103,6 +103,11 @@ class Settings(BaseSettings):
     TELEGRAM_ENABLED: bool = False
     TELEGRAM_NEWS_INTERVAL: int = 180   # seconds between news checks (default 3 min)
 
+    # ── Mobile App Settings ─────────────────────────────────────────────────
+    MOBILE_APP_API_ENABLED: bool = True
+    ALLOW_MOBILE_CORS: bool = True
+    FRONTEND_URL: str = "http://localhost:5173"
+
     class Config:
         env_file = str(__import__('pathlib').Path(__file__).parent / ".env")
         env_file_encoding = "utf-8"

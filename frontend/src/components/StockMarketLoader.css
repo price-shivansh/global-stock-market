@@ -1,0 +1,59 @@
+/* StockMarketLoader.css */
+/* Isolated animations for the React component */
+
+@keyframes smlFadeUpIn {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes smlDrawChart {
+  from { stroke-dashoffset: 1000; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes smlMarketPulse {
+  0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.3; }
+  100% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.6; }
+}
+
+@keyframes smlMarketLoaderProgress {
+  0% { transform: scaleX(0); transform-origin: left; }
+  100% { transform: scaleX(1); transform-origin: left; }
+}
+
+@keyframes smlTickerScroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-33.333333%); }
+}
+
+.sml-pulse-bg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-dim) 0%, transparent 70%);
+  opacity: 0.5;
+  animation: smlMarketPulse 3s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.sml-draw-line {
+  animation: smlDrawChart 2.5s ease-out forwards;
+  filter: drop-shadow(0 0 4px var(--accent));
+}
+
+.sml-progress-fill {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--bear), var(--warn) 50%, var(--bull));
+  animation: smlMarketLoaderProgress 4.2s linear forwards;
+}
+
+.sml-ticker-track {
+  display: flex;
+  animation: smlTickerScroll 20s linear infinite;
+  min-width: 200%;
+}

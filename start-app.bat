@@ -8,7 +8,7 @@ set SSLKEYLOGFILE=
 
 :: Start Backend
 echo Starting Backend Server on port 8000...
-start "Backend" cmd /k "set SSLKEYLOGFILE=&& cd /d %~dp0backend && python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload"
+start "Backend" cmd /k "set SSLKEYLOGFILE=&& cd /d %~dp0backend && python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
 
 :: Wait for backend to start
 timeout /t 5 /nobreak > nul

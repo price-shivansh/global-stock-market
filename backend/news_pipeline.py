@@ -2,7 +2,7 @@ import asyncio
 import logging
 import re
 from typing import List, Dict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from news_sources import (
     fetch_google_news,
     fetch_yahoo_finance_news,
@@ -28,10 +28,36 @@ def _normalize_title(title: str) -> str:
     t = re.sub(r'\s+', ' ', t).strip()
     return t
 
+def _pick_earliest_timestamps(winner: Dict, loser: Dict) -> Dict:
+    """
+    When a duplicate is found and we choose the winner (higher source_weight),
+    we must still preserve the EARLIEST timestamps from either copy.
+    This prevents timestamps from advancing across poll cycles.
+    """
+    # Prefer the earlier (or truthy) published
+    w_pub = winner.get("published")
+    l_pub = loser.get("published")
+    if w_pub is None and l_pub is not None:
+        winner["published"] = l_pub
+    elif w_pub is not None and l_pub is not None and l_pub < w_pub:
+        winner["published"] = l_pub
+
+    # Preserve the earlier first_seen_at
+    w_seen = winner.get("first_seen_at")
+    l_seen = loser.get("first_seen_at")
+    if w_seen is None and l_seen is not None:
+        winner["first_seen_at"] = l_seen
+    elif w_seen is not None and l_seen is not None and l_seen < w_seen:
+        winner["first_seen_at"] = l_seen
+
+    return winner
+
+
 def deduplicate_news_items(items: List[Dict]) -> List[Dict]:
     """
     Remove duplicated headlines based on normalized titles.
-    If duplicates exist, keep the one with the highest source_weight.
+    If duplicates exist, keep the one with the highest source_weight,
+    but ALWAYS preserve the earliest published / first_seen_at.
     """
     unique_items: Dict[str, Dict] = {}
     
@@ -46,14 +72,31 @@ def deduplicate_news_items(items: List[Dict]) -> List[Dict]:
             
         # 1. Exact / near-exact match deduplication
         if norm_title in unique_items:
-            existing_weight = unique_items[norm_title].get("source_weight", 1.0)
+            existing = unique_items[norm_title]
+            existing_weight = existing.get("source_weight", 1.0)
             new_weight = item.get("source_weight", 1.0)
             
             if new_weight > existing_weight:
-                unique_items[norm_title] = item
+                # New source is better — use it, but keep earliest timestamps
+                merged = _pick_earliest_timestamps(dict(item), existing)
+                unique_items[norm_title] = merged
             elif new_weight == existing_weight:
-                if item.get("published", datetime.min) > unique_items[norm_title].get("published", datetime.min):
-                    unique_items[norm_title] = item
+                # Same weight: keep the one with the earlier published time
+                # (both None → keep existing; one None → keep the non-None one)
+                e_pub = existing.get("published")
+                n_pub = item.get("published")
+                if e_pub is None and n_pub is not None:
+                    merged = _pick_earliest_timestamps(dict(item), existing)
+                    unique_items[norm_title] = merged
+                elif e_pub is not None and n_pub is not None and n_pub < e_pub:
+                    merged = _pick_earliest_timestamps(dict(item), existing)
+                    unique_items[norm_title] = merged
+                else:
+                    # Keep existing, but still merge first_seen_at
+                    unique_items[norm_title] = _pick_earliest_timestamps(existing, item)
+            else:
+                # Existing is better weight — keep it, but merge first_seen_at
+                unique_items[norm_title] = _pick_earliest_timestamps(existing, item)
         else:
             # 2. Substring match deduplication against existing items
             is_dup = False
@@ -65,13 +108,18 @@ def deduplicate_news_items(items: List[Dict]) -> List[Dict]:
                         n_weight = item.get("source_weight", 1.0)
                         
                         if n_weight > e_weight:
-                            # Replace existing with new better source
+                            # Replace existing with new better source, keep earliest timestamps
+                            merged = _pick_earliest_timestamps(dict(item), existing_item)
                             del unique_items[existing_title]
-                            unique_items[norm_title] = item
+                            unique_items[norm_title] = merged
                         elif n_weight == e_weight and len(norm_title) > len(existing_title):
-                            # Keep the longer, more descriptive title if weights tie
+                            # Keep longer title, merge timestamps
+                            merged = _pick_earliest_timestamps(dict(item), existing_item)
                             del unique_items[existing_title]
-                            unique_items[norm_title] = item
+                            unique_items[norm_title] = merged
+                        else:
+                            # Keep existing, merge timestamps
+                            unique_items[existing_title] = _pick_earliest_timestamps(existing_item, item)
                         break
             
             if not is_dup:
@@ -132,7 +180,8 @@ async def build_news_pipeline() -> List[Dict]:
     deduped = deduplicate_news_items(flattened)
     
     # Sort by publish time descending
-    deduped.sort(key=lambda x: x.get("published", datetime.min), reverse=True)
+    _epoch = datetime.min.replace(tzinfo=timezone.utc)
+    deduped.sort(key=lambda x: x.get("published") or _epoch, reverse=True)
     
     logger.info(f"[Pipeline] Fetch complete. Raw: {len(flattened)}, Deduped: {len(deduped)}")
     return deduped

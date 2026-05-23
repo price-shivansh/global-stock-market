@@ -32,6 +32,17 @@
         "nifty": true,
         "highpriority_only": false
       }
+    },
+    "8655201270": {
+      "is_active": true,
+      "filters": {
+        "global": true,
+        "crude": true,
+        "gas": true,
+        "crypto": true,
+        "nifty": true,
+        "highpriority_only": false
+      }
     }
   }
 }

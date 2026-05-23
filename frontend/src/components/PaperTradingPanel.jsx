@@ -20,6 +20,8 @@ import {
     AreaChart, Area, ComposedChart, Bar,
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
+import LightweightChart from './ui/LightweightChart';
+import QuantPanelMock from './quant/QuantPanelMock';
 
 const API = '/api';
 
@@ -570,7 +572,7 @@ export default function PaperTradingPanel() {
             <ToastList toasts={toasts} />
 
             {/* ── TOP ROW ── */}
-            <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr 280px', gap: '16px', alignItems: 'start' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 22%) minmax(0, 1fr) minmax(260px, 22%)', gap: '16px', alignItems: 'start' }}>
 
                 {/* New Order Form */}
                 <div className="holo-panel relative" style={{ padding: 0 }}>
@@ -669,9 +671,11 @@ export default function PaperTradingPanel() {
                     </div>
                 </div>
 
-                {/* Chart Panel */}
-                <div className="holo-panel relative overflow-hidden" style={{ minHeight: '520px' }}>
-                    <HoloCorners />
+                {/* Center Column */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {/* Chart Panel */}
+                    <div className="holo-panel relative overflow-hidden" style={{ minHeight: '520px' }}>
+                        <HoloCorners />
 
                     {/* Header row */}
                     <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
@@ -734,70 +738,25 @@ export default function PaperTradingPanel() {
                     {/* Charts */}
                     {displayData.length > 0 && (
                         <div style={{ padding: '8px 4px 12px 0' }}>
-                            <ResponsiveContainer width="100%" height={450}>
-                                {chartType === 'line' ? (
-
-                                    /* ── Area / Line ── */
-                                    <AreaChart data={displayData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                                        <defs>
-                                            <linearGradient id="ptGrad" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor={lineColor} stopOpacity={0.22} />
-                                                <stop offset="95%" stopColor={lineColor} stopOpacity={0} />
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,255,136,0.06)" />
-                                        <XAxis dataKey="date"
-                                            tick={{ fill: 'rgba(0,255,136,0.35)', fontSize: 9, fontFamily: 'Share Tech Mono' }}
-                                            axisLine={false} tickLine={false}
-                                            tickFormatter={tickFmt} interval={tickInterval}
-                                        />
-                                        <YAxis
-                                            tick={{ fill: 'rgba(0,255,136,0.35)', fontSize: 9, fontFamily: 'Share Tech Mono' }}
-                                            axisLine={false} tickLine={false} width={72} domain={['auto', 'auto']}
-                                            tickFormatter={priceFmt}
-                                        />
-                                        <Tooltip content={<HoloTooltip chartType="line" />} />
-                                        <Area type="monotone" dataKey="close"
-                                            stroke={lineColor} strokeWidth={1.5}
-                                            fill="url(#ptGrad)" dot={false}
-                                        />
-                                    </AreaChart>
-
-                                ) : (
-
-                                    /* ── Candlestick ── */
-                                    <ComposedChart data={displayData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,255,136,0.06)" />
-                                        <XAxis dataKey="date"
-                                            tick={{ fill: 'rgba(0,255,136,0.35)', fontSize: 9, fontFamily: 'Share Tech Mono' }}
-                                            axisLine={false} tickLine={false}
-                                            tickFormatter={tickFmt} interval={tickInterval}
-                                        />
-                                        {/*
-                                          domain must EXACTLY match yLo/yHi used in CandleShape.toY()
-                                          so candle pixel positions align with the axis ticks.
-                                        */}
-                                        <YAxis
-                                            tick={{ fill: 'rgba(0,255,136,0.35)', fontSize: 9, fontFamily: 'Share Tech Mono' }}
-                                            axisLine={false} tickLine={false} width={72}
-                                            domain={[yLo, yHi]}
-                                            tickFormatter={priceFmt}
-                                        />
-                                        <Tooltip content={<HoloTooltip chartType="candle" />} />
-                                        {/*
-                                          dataKey="high" so Recharts allocates bar space across the x-axis.
-                                          CandleShape completely re-draws its own SVG using background + domain.
-                                        */}
-                                        <Bar dataKey="high" shape={<CandleShape />} isAnimationActive={false} />
-                                    </ComposedChart>
-                                )}
-                            </ResponsiveContainer>
+                            <LightweightChart data={displayData} type={chartType} height={450} />
                         </div>
                     )}
                 </div>
 
-                {/* Simulated Order Book Panel */}
-                <div className="holo-panel relative overflow-hidden" style={{ minHeight: '520px' }}>
+                {/* Quant Decision Engine Panel */}
+                <QuantPanelMock 
+                    symbol={chartSymbol} 
+                    onApplyPlan={(plan) => {
+                        setDirection(plan.direction);
+                        setStopLoss(plan.stopLoss.toString());
+                        setTarget(plan.target.toString());
+                        if (plan.symbol) setSymbol(plan.symbol);
+                    }} 
+                />
+            </div>
+
+            {/* Simulated Order Book Panel */}
+            <div className="holo-panel relative overflow-hidden" style={{ minHeight: '520px' }}>
                     <HoloCorners />
                     <div className="panel-header">📚 MOCK ORDER BOOK</div>
                     <SimulatedOrderBook symbol={symbol} />

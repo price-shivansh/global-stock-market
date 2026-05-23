@@ -1,9 +1,9 @@
 import asyncio
 import aiohttp
-from datetime import datetime
+from datetime import datetime, timezone
 from bs4 import BeautifulSoup
 import logging
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +45,10 @@ def get_source_weight(source_name: str, category: str = "", asset_key: str = "")
 async def fetch_rss_feed(url: str, source_name: str, category: str, asset_hint: str = "", limit: int = 15) -> List[Dict]:
     """Generic async RSS fetcher returning normalized dicts."""
     items = []
+    # Capture the moment this fetch ran — used as a stable fallback if pubDate is unparseable.
+    # This is stable within a single poll cycle: if the same item appears on later polls,
+    # deduplication in news_pipeline.py will KEEP the earlier first_seen_at (see deduplicate logic).
+    fetch_time = datetime.now(timezone.utc)
     try:
         timeout = aiohttp.ClientTimeout(total=15)
         connector = aiohttp.TCPConnector(ssl=False)
@@ -64,21 +68,31 @@ async def fetch_rss_feed(url: str, source_name: str, category: str, asset_hint: 
                         # Sometimes source is provided in RSS
                         src_str = item.source.text if getattr(item, 'source', None) else source_name
                         
+                        published: Optional[datetime] = None
                         try:
-                            # Try common RSS datetime formats
-                            published = datetime.strptime(pub, "%a, %d %b %Y %H:%M:%S %Z")
+                            from email.utils import parsedate_to_datetime
+                            published = parsedate_to_datetime(pub)
                         except Exception:
                             try:
-                                # Backup format without seconds
-                                published = datetime.strptime(pub, "%a, %d %b %Y %H:%M %Z")
+                                # Try common RSS datetime formats
+                                published = datetime.strptime(pub, "%a, %d %b %Y %H:%M:%S %Z")
                             except Exception:
-                                published = datetime.now()
+                                try:
+                                    # Backup format without seconds
+                                    published = datetime.strptime(pub, "%a, %d %b %Y %H:%M %Z")
+                                except Exception:
+                                    # pubDate is missing / unparseable.
+                                    published = None
+                        
+                        if published is not None and published.tzinfo is None:
+                            published = published.replace(tzinfo=timezone.utc)
                                 
                         items.append({
                             "title": title.strip(),
                             "url": link.strip(),
                             "source": src_str.strip(),
-                            "published": published,
+                            "published": published,          # None if unparseable
+                            "first_seen_at": fetch_time,    # stable fallback, set ONCE per fetch
                             "category": category,
                             "asset_hint": asset_hint,
                             "source_weight": get_source_weight(src_str, category, asset_hint)
@@ -115,6 +129,7 @@ async def fetch_oilprice_news(category: str = "Commodities", asset_hint: str = "
     
     # If standard feed fails or changes, we want an async fallback
     if not items:
+        fetch_time_html = datetime.now(timezone.utc)
         try:
             url_html = "https://oilprice.com/Energy/Crude-Oil/"
             timeout = aiohttp.ClientTimeout(total=15)
@@ -133,14 +148,17 @@ async def fetch_oilprice_news(category: str = "Commodities", asset_hint: str = "
                                     "title": title,
                                     "url": link,
                                     "source": "OilPrice",
-                                    "published": datetime.now(), # rough approx
+                                    # No publish date available from HTML scrape.
+                                    # Use None so deduplicator can preserve earlier first_seen_at.
+                                    "published": None,
+                                    "first_seen_at": fetch_time_html,
                                     "category": category,
                                     "asset_hint": asset_hint,
                                     "source_weight": get_source_weight("OilPrice")
                                 })
         except Exception as e:
             logger.debug(f"[Fetch] OilPrice HTML fallback failed: {e}")
-            
+
     return items
 
 

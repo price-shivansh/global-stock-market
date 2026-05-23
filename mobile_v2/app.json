@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Quant Terminal",
+    "slug": "quant-terminal-v2",
+    "version": "1.0.0",
+    "sdkVersion": "54.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0d1117",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0d1117"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "updates": {
+      "enabled": false,
+      "checkAutomatically": "NEVER"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "android": {
+      "package": "com.globalmarket.quantterminal",
+      "permissions": [
+        "android.permission.INTERNET"
+      ]
+    },
+    "plugins": [],
+    "extra": {
+      "eas": {
+        "projectId": "6789ec9f-77f7-4082-b889-8f6d402fb07e"
+      }
+    }
+  }
+}

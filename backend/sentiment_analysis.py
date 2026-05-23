@@ -13,6 +13,7 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from models import NewsItem, MarketSentiment, SentimentType
 from config import settings
 from news_history import save_news_to_excel
+from services.news_archive import news_archive_service
 
 
 # Assets for which we auto-compute sentiment in get_market_sentiment()
@@ -788,9 +789,12 @@ class SentimentAnalyzer:
                             pub    = item.pubDate.text if item.pubDate else ""
                             source = item.source.text if item.source else "Unknown"
                             try:
-                                published = datetime.strptime(pub, "%a, %d %b %Y %H:%M:%S %Z")
+                                from email.utils import parsedate_to_datetime
+                                published = parsedate_to_datetime(pub)
+                                if published.tzinfo is None:
+                                    published = published.replace(tzinfo=timezone.utc)
                             except Exception:
-                                published = datetime.now()
+                                published = datetime.now(timezone.utc)
                             news_items.append({'title': title, 'url': link,
                                                'source': source, 'published': published})
         except Exception as e:
@@ -800,7 +804,7 @@ class SentimentAnalyzer:
     async def fetch_market_news(self) -> List[NewsItem]:
         """Fetch, analyze, and cache all market news using the multi-source pipeline."""
         if (self.cache_timestamp and
-                datetime.now() - self.cache_timestamp < timedelta(seconds=settings.NEWS_REFRESH_INTERVAL)):
+                datetime.now(timezone.utc) - self.cache_timestamp < timedelta(seconds=settings.NEWS_REFRESH_INTERVAL)):
             return list(self.news_cache.values())[0] if self.news_cache else []
 
         from news_pipeline import build_news_pipeline
@@ -824,11 +828,31 @@ class SentimentAnalyzer:
             if item.get('asset_hint') and item['asset_hint'] not in related_symbols:
                 related_symbols.append(item['asset_hint'])
 
+            # ── Timestamp resolution ──────────────────────────────────────────
+            # published=None means the RSS feed had no parseable pubDate.
+            # We use first_seen_at as the stable fallback — it was captured
+            # ONCE at fetch time and never mutates, so the displayed time will
+            # stop drifting after the first poll cycle that sees this article.
+            published_dt = item.get('published')
+            if published_dt is None:
+                first_seen = item.get('first_seen_at')
+                if first_seen is not None:
+                    published_dt = first_seen
+                else:
+                    # Absolute last resort: should never happen if news_sources.py
+                    # correctly sets first_seen_at. Log a warning so we can catch it.
+                    import logging as _log
+                    _log.getLogger(__name__).warning(
+                        "[SentimentAnalyzer] Item has neither published nor first_seen_at: %s",
+                        item.get('title', '')[:60]
+                    )
+                    published_dt = datetime.now(timezone.utc)
+
             all_news.append(NewsItem(
                 title=item['title'],
                 source=item['source'],
                 url=item['url'],
-                published=item['published'],
+                published=published_dt,
                 sentiment=sentiment_type,
                 sentiment_score=round(sentiment_score, 3),
                 related_symbols=related_symbols,
@@ -838,12 +862,17 @@ class SentimentAnalyzer:
 
         # Pipeline is already sorted and deduped
         self.news_cache['market'] = all_news[:60]
-        self.cache_timestamp = datetime.now()
+        self.cache_timestamp = datetime.now(timezone.utc)
 
         try:
             save_news_to_excel(all_news[:60])
         except Exception as e:
             print(f"[news_history] Could not save to Excel: {e}")
+
+        try:
+            news_archive_service.archive_news(all_news[:60])
+        except Exception as e:
+            print(f"[news_archive] Could not save to daily archive: {e}")
 
         return all_news[:60]
 
@@ -863,7 +892,7 @@ class SentimentAnalyzer:
                 overall_sentiment=SentimentType.NEUTRAL,
                 sentiment_score=0.0,
                 bullish_count=0, bearish_count=0, neutral_count=0,
-                news_items=[], last_updated=datetime.now(),
+                news_items=[], last_updated=datetime.now(timezone.utc),
                 asset_sentiments={},
             )
 
@@ -885,7 +914,7 @@ class SentimentAnalyzer:
             bearish_count=bearish_count,
             neutral_count=neutral_count,
             news_items=news_items,
-            last_updated=datetime.now(),
+            last_updated=datetime.now(timezone.utc),
             asset_sentiments=asset_sentiments,
         )
 
