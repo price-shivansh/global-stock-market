@@ -32,6 +32,36 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# ── Global Exception Handlers for Debugging ────────────────────────────────────
+import logging
+import traceback
+from fastapi import Request
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import HTTPException as FastAPIHTTPException
+
+logger = logging.getLogger("main")
+
+@app.exception_handler(FastAPIHTTPException)
+async def http_exception_handler(request: Request, exc: FastAPIHTTPException):
+    logger.error(f"HTTPException in request {request.method} {request.url.path}: status_code={exc.status_code}, detail={exc.detail}")
+    if exc.status_code >= 500:
+        logger.exception(exc)
+        traceback.print_exc()
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail}
+    )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception in request: {request.method} {request.url.path}")
+    logger.exception(exc)
+    traceback.print_exc()
+    return JSONResponse(
+        status_code=503,
+        content={"detail": f"Service Temporarily Unavailable: {str(exc)}", "type": type(exc).__name__}
+    )
+
 # ── CORS middleware ────────────────────────────────────────────────────────────
 cors_origins = [settings.FRONTEND_URL] if hasattr(settings, "FRONTEND_URL") else ["http://localhost:5173", "http://localhost:3000"]
 if getattr(settings, "ALLOW_MOBILE_CORS", True) or settings.DEBUG:

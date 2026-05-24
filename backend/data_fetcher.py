@@ -84,14 +84,18 @@ class DataFetcher:
     
     def _fetch_stock_data_sync(self, symbol: str, period: str = "3mo", interval: str = "1d") -> Optional[pd.DataFrame]:
         """Synchronously fetch stock data"""
+        import traceback
         try:
+            print(f"[yfinance] Fetching {symbol} (period={period}, interval={interval})")
             ticker = yf.Ticker(symbol)
             df = ticker.history(period=period, interval=interval)
-            if df.empty:
+            if df is None or df.empty:
+                print(f"[yfinance] Warning: DataFrame is empty or None for {symbol}")
                 return None
             return df
         except Exception as e:
-            print(f"Error fetching {symbol}: {e}")
+            print(f"[yfinance] Error fetching {symbol}: {e}")
+            traceback.print_exc()
             return None
     
     async def fetch_stock_data(self, symbol: str, period: str = "3mo", interval: str = "1d") -> Optional[pd.DataFrame]:
