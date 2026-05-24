@@ -19,9 +19,11 @@ staticSites:
   - name: global-market-frontend
     env: static
     region: ohio
-    buildCommand: cd frontend && npm install && npm run build
-    publishPath: frontend/dist
+    buildCommand: bun install && bun run build
+    publishPath: dist
     envVars:
+      - key: BUN_VERSION
+        value: latest
       - key: VITE_API_URL
         fromService:
           type: web
