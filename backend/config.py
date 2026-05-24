@@ -3,8 +3,14 @@ Configuration settings for the Stock Signal Application
 """
 from pydantic_settings import BaseSettings
 from typing import List
+from pathlib import Path
 
 class Settings(BaseSettings):
+    # Centralized Path Resolution
+    BASE_DIR: Path = Path(__file__).resolve().parent
+    DATA_DIR: Path = Path(__file__).resolve().parent / "data"
+    HISTORY_DIR: Path = Path(__file__).resolve().parent / "History"
+
     # App Settings
     APP_NAME: str = "Options Signal Dashboard"
     DEBUG: bool = True

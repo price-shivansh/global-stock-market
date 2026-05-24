@@ -195,7 +195,6 @@ class ExcelNewsArchive(BaseNewsArchive):
         dates.sort(reverse=True)
         return dates
 
-import os
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-default_archive_dir = os.path.join(BASE_DIR, "data", "news_archive")
+from config import settings
+default_archive_dir = os.path.join(str(settings.DATA_DIR), "news_archive")
 news_archive_service = ExcelNewsArchive(storage_dir=default_archive_dir)

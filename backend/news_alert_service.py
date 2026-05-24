@@ -16,7 +16,7 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 # ── Persistence path ──────────────────────────────────────────────────────────
-_DATA_DIR  = Path(__file__).parent / "data"
+_DATA_DIR  = settings.DATA_DIR
 _SENT_FILE = _DATA_DIR / "sent_news.json"
 
 # ── Tunables ─────────────────────────────────────────────────────────────────

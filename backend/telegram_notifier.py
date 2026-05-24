@@ -30,7 +30,7 @@ DEFAULT_FILTERS = {
 class TelegramSubscriberManager:
     """Manages persistent storage of Telegram chat IDs and their filter preferences."""
     def __init__(self):
-        self.file_path = Path(__file__).parent / "data" / "telegram_subscribers.json"
+        self.file_path = settings.DATA_DIR / "telegram_subscribers.json"
         self.subscribers = {}
         self.load_subscribers()
         self._migrate_legacy_id()

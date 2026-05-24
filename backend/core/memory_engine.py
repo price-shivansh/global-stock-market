@@ -12,10 +12,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 
+from config import settings
+
 logger = logging.getLogger(__name__)
 
 # ── Database location ─────────────────────────────────────────────────────────
-_DB_PATH = Path(__file__).parent.parent / "data" / "adaptive_memory.db"
+_DB_PATH = settings.DATA_DIR / "adaptive_memory.db"
 
 # ── Default adaptive weights ──────────────────────────────────────────────────
 DEFAULT_WEIGHTS: Dict[str, float] = {

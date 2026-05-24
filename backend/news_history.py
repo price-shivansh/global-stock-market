@@ -29,9 +29,11 @@ BEARISH_FILL  = PatternFill("solid", fgColor="FEE2E2")   # light red
 NEUTRAL_FILL  = PatternFill("solid", fgColor="F1F5F9")   # light gray
 
 
+from config import settings
+
 def get_history_path(category: str = "General") -> str:
     """Return the absolute path to the Excel file for a specific market category."""
-    history_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "History")
+    history_dir = str(settings.HISTORY_DIR)
     os.makedirs(history_dir, exist_ok=True)
     filename = f"{category.lower().replace(' ', '_')}_news_history.xlsx"
     return os.path.join(history_dir, filename)
