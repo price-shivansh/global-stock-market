@@ -1,8 +1,7 @@
 import os
 import glob
 from typing import List, Dict, Optional
-from datetime import datetime
-import pandas as pd
+from datetime import datetime, timedelta
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font
 
@@ -123,22 +122,42 @@ class ExcelNewsArchive(BaseNewsArchive):
             return []
             
         try:
-            df = pd.read_excel(filepath)
-            df = df.fillna("")
-            records = df.to_dict("records")
+            wb = load_workbook(filepath, read_only=True)
+            ws = wb.active
+            
+            # Read header row to map column names to indexes
+            header = []
+            for row in ws.iter_rows(min_row=1, max_row=1, values_only=True):
+                header = list(row) if row else []
+                break
+                
+            col_map = {name: idx for idx, name in enumerate(header) if name is not None}
             
             output = []
-            for r in records:
-                sentiment_val = str(r.get("sentiment", "NEUTRAL")).replace("SentimentType.", "")
+            # Read data rows
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                if not row or not any(row is not None for row in row):
+                    continue
+                
+                def get_val(col_name, default=""):
+                    idx = col_map.get(col_name)
+                    if idx is not None and idx < len(row):
+                        val = row[idx]
+                        return val if val is not None else default
+                    return default
+                
+                sentiment_val = str(get_val("sentiment", "NEUTRAL")).replace("SentimentType.", "")
+                related = get_val("related_symbols", "")
+                
                 output.append({
-                    "title": str(r.get("title", "")),
-                    "source": str(r.get("source", "")),
-                    "url": str(r.get("url", "")),
-                    "published": str(r.get("timestamp", "")),
+                    "title": str(get_val("title", "")),
+                    "source": str(get_val("source", "")),
+                    "url": str(get_val("url", "")),
+                    "published": str(get_val("timestamp", "")),
                     "sentiment": sentiment_val,
-                    "sentiment_score": float(r.get("sentiment_score", 0.0)) if r.get("sentiment_score") else 0.0,
-                    "category": str(r.get("category", "")),
-                    "related_symbols": str(r.get("related_symbols", "")).split(",") if r.get("related_symbols") else []
+                    "sentiment_score": float(get_val("sentiment_score", 0.0)) if get_val("sentiment_score", 0.0) is not None else 0.0,
+                    "category": str(get_val("category", "")),
+                    "related_symbols": str(related).split(",") if related else []
                 })
             
             output.sort(key=lambda x: x["published"], reverse=True)
@@ -150,9 +169,15 @@ class ExcelNewsArchive(BaseNewsArchive):
 
     def get_by_date_range(self, start_date: str, end_date: str) -> List[Dict]:
         try:
-            dates = pd.date_range(start=start_date, end=end_date).strftime("%Y-%m-%d").tolist()
-        except:
+            start = datetime.strptime(start_date, "%Y-%m-%d")
+            end = datetime.strptime(end_date, "%Y-%m-%d")
+            delta = end - start
+            dates = [(start + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(delta.days + 1)]
+        except Exception as date_err:
+            import logging
+            logging.error(f"Error parsing date range {start_date} to {end_date}: {date_err}")
             return []
+            
         combined = []
         for d in dates:
             combined.extend(self.get_by_date(d))
